@@ -34,7 +34,7 @@ skill 目录下的 `config.json`（不入库）记录本机路径与品牌，字
 
 优先级：**命令行参数 > 环境变量（`LISTEN_SITE` / `LISTEN_WORK`）> config.json > 自动探测**。
 在站点仓库目录下运行时，`site` 会靠 `english/listening.html` 自动认出，可以不配。
-`brand` 全部可省——省了就用中性默认（站名「听力练习」，无版权行、无 footer 链接）。
+`brand` 全部可省——省了就用中性默认（站名「我的站点」，无版权行、无 footer 链接）。
 
 ```powershell
 $SK = "$env:USERPROFILE\.trae-cn\skills\english-listening"
@@ -50,11 +50,11 @@ Whisper 模型缓存在 `%USERPROFILE%\.cache\whisper`，首次用某个模型�
 
 ## 站点侧前提
 
-- 仓库里要有 `english/listening.html`（练习列表页，含 `<div class="cards">`）。
 - 练习包放 `english/listening/<slug>/`，只含 `index.html`、`audio.mp3`、`data.js`。
 - **目录深度是硬约束**：模板里写死 `../../../css/style.css`，放错层级就没样式。
-- 站点还需要 `css/style.css`、`js/clay.js`、`favicon.svg`。新建站点时用
-  `export --sync-kit` 让脚本从 `assets/site-kit/` 自动补一份（已有文件不覆盖）。
+- 站点还需要 `css/style.css`、`js/clay.js`、`favicon.svg`，以及 `english/listening.html` 列表页
+  （`publish` 靠它插卡片）。这三样资源和一个空列表页都能由 `export --sync-kit` 自动补齐，
+  **已存在的文件不覆盖**。新建站点时第一次 export 带上就行。
 
 ## A 全流程
 

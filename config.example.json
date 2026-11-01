@@ -4,7 +4,7 @@
  "site": "C:\\path\\to\\your-site-repo",
  "work": "",
  "brand": {
-  "_readme": "渲染进练习页 footer 的品牌信息。全部可省，省略时只显示「听力练习」四个字。links 里的相对路径以练习页为准（练习页在第 3 层，所以 ../../../index.html 指站点根）。",
+  "_readme": "渲染进练习页与列表页 footer 的品牌信息。全部可省，省略时站名显示「我的站点」，没有版权行和页脚链接。links 里的相对路径以练习页为准（练习页在第 3 层，所以 ../../../index.html 指站点根）。",
   "name": "我的小站",
   "copyright": "© 2026 Your Name",
   "links": [

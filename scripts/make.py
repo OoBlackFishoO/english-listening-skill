@@ -348,7 +348,7 @@ def build_data_js(payload):
     return "window.__EXERCISE__ = " + js + ";\n"
 
 
-DEFAULT_BRAND = {"name": "听力练习", "copyright": "", "links": []}
+DEFAULT_BRAND = {"name": "我的站点", "copyright": "", "links": []}
 
 
 def get_brand(override=""):
@@ -360,8 +360,8 @@ def get_brand(override=""):
     return b
 
 
-def render_template(brand_override=""):
-    """把模板占位符渲染成实际页面。未配置品牌时用中性默认值。"""
+def render_html(html, brand_override=""):
+    """把占位符渲染成实际页面。未配置品牌时用中性默认值。"""
     brand = get_brand(brand_override)
     name = brand.get("name") or DEFAULT_BRAND["name"]
     links = brand.get("links") or []
@@ -374,23 +374,36 @@ def render_template(brand_override=""):
     copy = (brand.get("copyright") or "").strip()
     copy_line = '<p class="footer-copy">%s</p>' % copy if copy else ""
 
-    with open(TEMPLATE, encoding="utf-8") as f:
-        html = f.read()
     html = html.replace("{{SITE_NAME_JSON}}", json.dumps(name, ensure_ascii=False))
     html = html.replace("{{SITE_NAME}}", name)
     html = html.replace("{{FOOTER_LINKS}}", link_html)
     html = html.replace("{{COPYRIGHT_LINE}}", copy_line)
     left = set(re.findall(r"\{\{[A-Z_]+\}\}", html))
     if left:
-        print("！模板占位符未替换：%s" % ", ".join(sorted(left)))
+        print("！占位符未替换：%s" % ", ".join(sorted(left)))
     return html
 
 
+def render_template(brand_override=""):
+    with open(TEMPLATE, encoding="utf-8") as f:
+        return render_html(f.read(), brand_override)
+
+
+def site_root_of(dest):
+    """练习包在 <站点根>/english/listening/<slug>/，往上三级。"""
+    return os.path.abspath(os.path.join(dest, "..", "..", ".."))
+
+
+def looks_like_site(root):
+    return any(os.path.exists(os.path.join(root, x))
+               for x in ("index.html", "english", "css"))
+
+
 def sync_kit(dest):
-    """目标站点缺 css/js/favicon 时，从 assets/site-kit 补一份。"""
-    site_root = os.path.abspath(os.path.join(dest, "..", "..", ".."))
-    if not os.path.exists(os.path.join(site_root, "english", "listening.html")):
-        print("！跳过 --sync-kit：%s 不像站点根（缺 english/listening.html）" % site_root)
+    """给站点补齐 css/js/favicon；缺 english/listening.html 时也补一份空列表页。"""
+    site_root = site_root_of(dest)
+    if not looks_like_site(site_root):
+        print("！跳过 --sync-kit：%s 不像站点根（无 index.html / english / css）" % site_root)
         return
     kit = os.path.join(SKILL, "assets", "site-kit")
     for rel, name in (("css/style.css", "style.css"),
@@ -402,6 +415,17 @@ def sync_kit(dest):
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copyfile(os.path.join(kit, name), dst)
         print("补站点资源 →", dst)
+
+    page = os.path.join(site_root, "english", "listening.html")
+    if os.path.exists(page):
+        return
+    with open(os.path.join(kit, "listening.html"), encoding="utf-8") as f:
+        html = render_html(f.read())
+    os.makedirs(os.path.dirname(page), exist_ok=True)
+    with open(page, "w", encoding="utf-8", newline="\n") as f:
+        f.write(html)
+    print("补站点页面 →", page)
+    print("  提示：里面的「← 回英语区」指向 ../english.html，站点没有这一页就删掉那行按钮")
 
 
 def cmd_export(args):

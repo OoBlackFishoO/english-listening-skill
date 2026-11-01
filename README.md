@@ -20,7 +20,7 @@
 | 依赖 | 说明 |
 |---|---|
 | Python 3.10+ | 需要 `pip install openai-whisper imageio-ffmpeg` |
-| 一个静态站点 | 至少要有 `english/listening.html` 列表页（见下方「站点要求」） |
+| 一个静态站点 | 空目录也行，`--sync-kit` 会自动补齐样式、脚本和列表页 |
 | 磁盘 | Whisper `small.en` 模型约 480MB，缓存在 `~/.cache/whisper` |
 
 有 NVIDIA 显卡会自动用 GPU（fp16），没有就走 CPU，只是慢一些。
@@ -97,11 +97,12 @@ $MK = "$SK\scripts\make.py"
 
 ```
 你的站点/
-├── css/style.css          ← 缺了用 --sync-kit 自动补
-├── js/clay.js             ← 缺了用 --sync-kit 自动补
-├── favicon.svg            ← 缺了用 --sync-kit 自动补
+├── index.html             ← 有一个就行
+├── css/style.css          ← 缺了自动补
+├── js/clay.js             ← 缺了自动补
+├── favicon.svg            ← 缺了自动补
 └── english/
-    ├── listening.html     ← 需要一个列表页，含 <div class="cards">
+    ├── listening.html     ← 缺了自动补（练习目录页）
     └── listening/
         └── cet6-x/
             ├── index.html ← 导出生成
@@ -109,7 +110,12 @@ $MK = "$SK\scripts\make.py"
             └── data.js    ← 导出生成
 ```
 
-`--sync-kit` 会从 `assets/site-kit/` 补 `css/style.css`、`js/clay.js`、`favicon.svg`，**已存在的文件不覆盖**。
+`export --sync-kit` 会从 `assets/site-kit/` 补齐上面前四个标了「补」的文件，
+**已存在的一律不覆盖**，所以对自己已有站点重复执行是安全的。
+
+补出来的 `english/listening.html` 是个空目录页，只留一个空的 `<div class="cards">`，
+等 `publish` 往里插卡片。它顶部有个「← 回英语区」按钮指向 `../english.html`，
+如果你的站点没有这一页，删掉那行按钮即可（脚本会提醒）。
 
 `data.js` 的格式固定，练习页只认这个前缀：
 

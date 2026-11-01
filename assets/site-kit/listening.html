@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>听力填空练习 · {{SITE_NAME}}</title>
+  <meta name="description" content="英语听力填空练习：逐句精听或整段连听，挖空填词、判分、看翻译，进度存在浏览器里。">
+  <link rel="icon" type="image/svg+xml" href="../favicon.svg">
+  <link rel="stylesheet" href="../css/style.css">
+  <noscript><style>.pop{opacity:1 !important;transform:none !important}</style></noscript>
+</head>
+<body data-page="english">
+
+  <section class="section" style="padding-top:26px">
+    <a class="clay-btn ghost small" href="../english.html" style="margin-bottom:18px">← 回英语区</a>
+
+    <div class="section-head">
+      <span class="badge coral">🎧 听力填空练习</span>
+      <h2>选一段开始</h2>
+    </div>
+
+    <div class="cards">
+      <!-- 练习卡片由 english-listening skill 的 publish 命令自动插入，不用手写 -->
+    </div>
+
+    <div class="tip-card pop" style="margin-top:26px">
+      <span class="ico">📦</span>
+      <p>
+        <b>这些练习怎么来的：</b>本地 Whisper 转写 + 逐句人工校对生成，
+        练习包放进 <code>english/listening/</code> 文件夹即自动上线。你的作答进度只存在你自己的浏览器里。
+      </p>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <svg class="footer-wave" viewBox="0 0 1440 46" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0,46 C240,6 480,6 720,26 C960,46 1200,10 1440,30 L1440,46 Z" fill="#F3E3CC"/>
+    </svg>
+    <div class="footer-inner">
+      <div class="footer-logo" title="捏我试试">
+        <span class="ava">🐟</span>
+        <span>{{SITE_NAME}}</span>
+      </div>
+      {{COPYRIGHT_LINE}}
+    </div>
+  </footer>
+
+  <script src="../js/clay.js"></script>
+</body>
+</html>
