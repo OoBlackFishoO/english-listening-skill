@@ -1,0 +1,20 @@
+# 统一用 LF，避免 Windows 检出成 CRLF 后与上游不一致
+* text=auto eol=lf
+
+*.py    text eol=lf
+*.md    text eol=lf
+*.json  text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.js    text eol=lf
+*.svg   text eol=lf
+*.gitignore    text eol=lf
+*.gitattributes text eol=lf
+
+# Windows 批处理必须是 CRLF
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# 二进制
+*.mp3   binary
+*.pt    binary

@@ -1,0 +1,15 @@
+{
+ "_readme": "复制本文件为同目录的 config.json 再填自己的路径。config.json 已在 .gitignore 里，不会进版本库。字段都可省略，省略时按下面顺序回退：命令行参数 > 环境变量 > 本文件 > 自动探测。",
+ "python": "C:\\path\\to\\venv\\Scripts\\python.exe",
+ "site": "C:\\path\\to\\your-site-repo",
+ "work": "",
+ "brand": {
+  "_readme": "渲染进练习页 footer 的品牌信息。全部可省，省略时只显示「听力练习」四个字。links 里的相对路径以练习页为准（练习页在第 3 层，所以 ../../../index.html 指站点根）。",
+  "name": "我的小站",
+  "copyright": "© 2026 Your Name",
+  "links": [
+   { "label": "GitHub", "url": "https://github.com/your-name" },
+   { "label": "首页", "url": "../../../index.html" }
+  ]
+ }
+}

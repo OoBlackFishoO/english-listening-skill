@@ -1,0 +1,1222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>英语听力 · {{SITE_NAME}}</title>
+<link rel="icon" type="image/svg+xml" href="../../../favicon.svg">
+<link rel="stylesheet" href="../../../css/style.css">
+<style>
+/* ============ 听力练习页（v5）：正文为主；顶部常驻翻页，底部唯一播放坞 ============ */
+:root{--dock-h:78px}
+body{min-height:100vh;display:flex;flex-direction:column}
+.wrap{width:100%;max-width:860px;margin:0 auto;padding:26px 22px calc(var(--dock-h) + 24px);flex:1 0 auto}
+
+/* ---- 顶部细栏（吸顶，翻页常驻） ---- */
+.exbar{position:sticky;top:0;z-index:55;display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;
+  margin:0 -22px 14px;padding:10px 22px;background:var(--bg);
+  box-shadow:0 12px 18px -20px rgba(93,63,43,.4)}
+.exbar .ttl{flex:1;min-width:0;font-size:clamp(17px,2.4vw,21px);font-weight:900;margin:0;line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.exbar .meta{flex-basis:100%;font-size:12.5px;font-weight:700;color:var(--ink-soft);margin-top:-4px}
+.pgnav{position:relative;display:flex;align-items:center;gap:2px;flex:none;padding:3px;border-radius:999px;
+  background:var(--white);box-shadow:2px 3px 8px rgba(93,63,43,.12),var(--clay-in-light),var(--clay-in-dark)}
+.pgnav .pg{min-width:30px;height:30px;padding:0 8px;font-size:15px;background:none;box-shadow:none}
+.pgnav .pg:hover{background:var(--bg);transform:none}
+.pgnav .pgnum{min-width:auto;padding:0 7px;font-size:12.5px;color:var(--ink);font-variant-numeric:tabular-nums}
+.pgpop{position:absolute;top:calc(100% + 8px);right:0;width:250px;max-height:min(58vh,320px);overflow:auto;
+  display:grid;grid-template-columns:repeat(6,1fr);gap:5px;
+  padding:10px;border-radius:16px;background:var(--white);box-shadow:0 16px 34px rgba(93,63,43,.22),var(--clay-in-light)}
+.pgpop[hidden]{display:none}
+.pgpop .pg{min-width:0;height:30px;font-size:12px;background:var(--bg);box-shadow:none;color:var(--ink-soft)}
+.pgpop .pg:hover{background:var(--butter);transform:none}
+.pgpop .pg.on{background:var(--coral);color:#fff}
+
+/* ---- 正文卡（带进场：从听力区点进来时轻轻浮现） ---- */
+.paper{padding:18px 22px;animation:rise .55s var(--spring) .04s backwards}
+.actionbar{animation:rise .55s var(--spring) .12s backwards}
+@keyframes rise{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+.ppage[hidden]{display:none}
+.ppage{animation:pagein .35s var(--spring)}
+@keyframes pagein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.seg{padding:14px 0}
+.seg:first-child{padding-top:2px}
+.pgsub{font-size:11.5px;font-weight:800;color:var(--ink-soft);letter-spacing:.02em;margin:0 0 2px}
+.seg:last-child{padding-bottom:2px}
+.seg+.seg{border-top:1px dashed rgba(93,63,43,.18)}
+.segbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.segbtn{font-family:var(--font);font-size:12.5px;font-weight:800;color:var(--ink-soft);
+  background:var(--white);border:0;border-radius:999px;padding:5px 11px;cursor:pointer;
+  box-shadow:2px 3px 7px rgba(93,63,43,.1),var(--clay-in-light),var(--clay-in-dark);
+  transition:transform .18s var(--spring),color .18s,background .18s}
+.segbtn:hover{color:var(--ink);transform:translateY(-1px)}
+.segbtn:active{transform:scale(.94)}
+.seg.looping .loopBtn{background:var(--coral);color:#fff}
+.seg .time{font-size:11.5px;font-weight:700;color:var(--ink-soft);margin-left:auto}
+.text{font-size:18.5px;line-height:2.05;word-break:break-word}
+.srun{display:inline;border-radius:10px;padding:1px 3px;transition:background .25s}
+.text.zh-on .srun{display:inline-block;vertical-align:top;max-width:100%}
+.srun.cur{background:#FFF3D6;box-shadow:var(--clay-in-light)}
+.zh{display:block;font-size:13.5px;color:var(--ink-soft);margin:2px 0 3px;padding-left:9px;
+  line-height:1.6;border-left:2px solid rgba(93,63,43,.14)}
+.zh.hidden{display:none}
+
+/* ---- 填空框 ---- */
+input.blank{border:0;background:#FFF0CC;padding:1px 8px;font-size:16px;font-family:var(--font);
+  width:auto;min-width:3.8em;text-align:center;border-radius:10px;color:var(--ink);font-weight:700;
+  touch-action:manipulation;
+  box-shadow:var(--clay-in-light),inset 0 -3px 6px rgba(93,63,43,.12)}
+input.blank:focus{outline:0;background:var(--butter)}
+input.blank.ok{background:#DFF5E9;box-shadow:var(--clay-in-light),inset 0 -3px 6px rgba(39,153,84,.22)}
+input.blank.bad{background:#FFE4EC;box-shadow:var(--clay-in-light),inset 0 -3px 6px rgba(226,75,74,.22)}
+
+/* ---- 判分操作条 ---- */
+.actionbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 0}
+.peek-hint{font-size:12px;margin-left:2px}
+.score-chip{display:inline-block;padding:7px 18px;border-radius:999px;background:var(--butter);
+  font-weight:900;font-size:13.5px;margin-left:auto;
+  box-shadow:var(--clay-in-light),var(--clay-in-dark),3px 5px 10px rgba(93,63,43,.15)}
+
+/* ---- 翻页按钮底座（顶部页码与数字弹层共用） ---- */
+.pg{min-width:36px;height:36px;padding:0 10px;border:0;border-radius:999px;background:var(--white);
+  color:var(--ink-soft);font-family:var(--font);font-size:13px;font-weight:900;cursor:pointer;
+  box-shadow:2px 4px 9px rgba(93,63,43,.12),var(--clay-in-light),var(--clay-in-dark);
+  transition:transform .18s var(--spring),background .18s,color .18s}
+.pg:active{transform:scale(.94)}
+.pg:disabled{opacity:.4;cursor:default;transform:none}
+
+/* ---- 浮动设置球 ---- */
+.fab{position:fixed;right:16px;bottom:calc(var(--dock-h) + 14px);z-index:70}
+.fab-btn{position:relative;width:48px;height:48px;border:0;border-radius:50%;background:var(--white);
+  color:var(--ink);font-size:20px;cursor:pointer;box-shadow:var(--clay-shadow),var(--clay-in-light),var(--clay-in-dark);
+  transition:transform .2s var(--spring)}
+.fab-btn:hover{transform:translateY(-2px) rotate(8deg)}
+.fab-btn:active{transform:scale(.94)}
+.fab-panel{position:absolute;right:0;bottom:58px;width:min(320px,calc(100vw - 28px));max-height:82vh;overflow:auto;
+  background:var(--white);border-radius:20px;padding:14px 16px;
+  box-shadow:0 18px 44px rgba(93,63,43,.28),var(--clay-in-light);
+  opacity:0;transform:translateY(10px) scale(.97);transform-origin:bottom right;
+  pointer-events:none;transition:opacity .2s,transform .22s var(--spring)}
+.fab.open .fab-panel{opacity:1;transform:none;pointer-events:auto}
+.fp-head{display:flex;align-items:center;justify-content:space-between;font-size:14px;font-weight:900;margin-bottom:8px}
+.fp-close{border:0;background:none;font-size:18px;line-height:1;color:var(--ink-soft);cursor:pointer;padding:0 2px}
+.fp-group{padding-top:10px;border-top:1px dashed rgba(93,63,43,.16)}
+.fp-group:first-of-type{border-top:0;padding-top:0}
+.fp-label{font-size:11.5px;font-weight:900;color:var(--ink-soft);margin-bottom:6px}
+.fp-chips{display:flex;flex-wrap:wrap;gap:5px}
+.opt{border:0;border-radius:999px;padding:5px 10px;font-family:var(--font);font-size:12px;font-weight:800;
+  color:var(--ink-soft);background:var(--bg);cursor:pointer;transition:background .18s,color .18s,transform .18s var(--spring)}
+.opt:hover{transform:translateY(-1px);color:var(--ink)}
+.opt.on{background:var(--coral);color:#fff}
+.fp-more{border:0;background:none;padding:0;font-family:var(--font);font-size:11.5px;font-weight:900;
+  color:var(--ink-soft);cursor:pointer;margin-top:8px}
+.fp-more:hover{color:var(--ink)}
+.fp-adv{margin-top:8px;display:flex;flex-direction:column;gap:8px}
+.fp-adv[hidden]{display:none}
+.fp-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:12px;font-weight:800;color:var(--ink-soft)}
+.fp-row input[type=number]{width:58px;padding:4px 8px;border:0;border-radius:999px;background:var(--bg);
+  font-family:var(--font);font-size:12px;font-weight:800;color:var(--ink);text-align:center;box-shadow:var(--clay-in-light)}
+.fp-row input[type=number]:disabled{opacity:.45}
+.fp-vol{flex-wrap:nowrap;gap:8px}
+.fp-vol input[type=range]{flex:1;min-width:80px;height:18px;margin:0;accent-color:var(--coral)}
+.fp-vol .vol-val{font-size:11.5px;font-weight:800;color:var(--ink-soft);min-width:36px;text-align:right;
+  font-variant-numeric:tabular-nums}
+
+/* ---- 底部播放坞（唯一播放入口） ---- */
+.dock{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);z-index:65;
+  width:min(620px,calc(100vw - 20px));padding:8px 12px;border-radius:22px;background:var(--white);
+  box-shadow:var(--clay-shadow),var(--clay-in-light),var(--clay-in-dark);
+  animation:dockin .55s var(--spring) .16s backwards}
+@keyframes dockin{from{opacity:0;transform:translateX(-50%) translateY(18px)}to{opacity:1;transform:translateX(-50%)}}
+.dock-row{display:flex;align-items:center;gap:8px}
+.dock-track{position:relative;flex:1;min-width:64px}
+.dock-time{display:flex;align-items:center;gap:3px;font-size:11px;font-weight:800;line-height:1;
+  color:var(--ink-soft);font-variant-numeric:tabular-nums;margin-bottom:2px}
+.dock-time .now{color:var(--ink)}
+.dock-time .sep{opacity:.45}
+.dock-seek{position:relative;height:16px}
+.dock-seek::before{content:"";position:absolute;left:0;right:0;top:50%;height:4px;margin-top:-2px;
+  border-radius:2px;background:rgba(93,63,43,.16);pointer-events:none}
+.dock-fill{position:absolute;left:0;top:50%;height:4px;margin-top:-2px;border-radius:2px;
+  background:var(--coral);width:0;pointer-events:none}
+#seek{position:relative;display:block;width:100%;height:16px;margin:0;appearance:none;background:transparent;cursor:pointer}
+#seek::-webkit-slider-runnable-track{background:transparent;height:16px}
+#seek::-webkit-slider-thumb{appearance:none;width:12px;height:12px;margin-top:2px;border-radius:50%;background:var(--coral);
+  box-shadow:var(--clay-in-light),1px 2px 5px rgba(93,63,43,.3)}
+#seek::-moz-range-track{background:transparent;height:16px}
+#seek::-moz-range-thumb{width:12px;height:12px;border:0;border-radius:50%;background:var(--coral);
+  box-shadow:1px 2px 5px rgba(93,63,43,.3)}
+.dock-pins{position:absolute;left:0;right:0;bottom:0;height:6px;pointer-events:none}
+.dp-pin{position:absolute;bottom:0;width:5px;height:5px;padding:0;border:0;border-radius:50%;
+  background:rgba(93,63,43,.4);transform:translateX(-50%);cursor:pointer;pointer-events:auto}
+.dp-pin:hover,.dp-pin:focus-visible{background:var(--coral);outline:0}
+.mb-main{width:42px;height:42px;flex:none;border:0;border-radius:50%;background:var(--coral);color:#fff;
+  font-size:17px;line-height:1;cursor:pointer;box-shadow:var(--clay-in-light),var(--clay-in-dark),2px 4px 10px rgba(93,63,43,.2);
+  transition:transform .18s var(--spring),background .18s}
+.mb-main:hover{transform:translateY(-1px)}
+.mb-main:active{transform:scale(.9)}
+.mb-nav{width:30px;height:30px;flex:none;border:0;border-radius:50%;background:var(--bg);color:var(--ink-soft);
+  font-size:13px;line-height:1;cursor:pointer;box-shadow:var(--clay-in-light),var(--clay-in-dark);
+  transition:transform .18s var(--spring),color .18s}
+.mb-nav:hover{color:var(--ink);transform:translateY(-1px)}
+.mb-nav:active{transform:scale(.9)}
+.dock-replay{flex:none;display:inline-flex;align-items:center;gap:3px;padding:6px 9px;border:0;border-radius:999px;
+  background:var(--bg);font-family:var(--font);font-size:11.5px;font-weight:900;color:var(--ink-soft);cursor:pointer;
+  box-shadow:var(--clay-in-light),var(--clay-in-dark);transition:background .16s,color .16s,transform .16s var(--spring)}
+.dock-replay:hover{background:var(--butter);color:var(--ink)}
+.dock-replay:active{transform:scale(.94)}
+.dock-rate{flex:none;padding:6px 8px;border:0;border-radius:999px;background:var(--bg);
+  font-family:var(--font);font-size:11.5px;font-weight:900;color:var(--ink-soft);cursor:pointer;
+  box-shadow:var(--clay-in-light),var(--clay-in-dark);transition:background .16s,color .16s}
+.dock-rate:hover{background:var(--butter);color:var(--ink)}
+.dock-more{flex:none;width:30px;height:30px;border:0;border-radius:50%;background:var(--bg);
+  font-family:var(--font);font-size:17px;font-weight:900;line-height:1;color:var(--ink-soft);cursor:pointer;
+  box-shadow:var(--clay-in-light),var(--clay-in-dark);transition:background .16s,color .16s}
+.dock-more:hover{background:var(--butter);color:var(--ink)}
+.dock-more[aria-expanded="true"]{background:var(--coral);color:#fff}
+.dock-panel{position:absolute;left:0;right:0;bottom:calc(100% + 10px);display:flex;flex-direction:column;gap:10px;
+  padding:14px 16px;border-radius:20px;background:var(--white);
+  box-shadow:0 18px 40px rgba(93,63,43,.26),var(--clay-in-light)}
+.dock-panel[hidden]{display:none}
+.dp-head{display:flex;align-items:center;justify-content:space-between;font-size:13.5px;font-weight:900}
+.dp-close{border:0;background:none;padding:0 2px;font-size:18px;line-height:1;color:var(--ink-soft);cursor:pointer}
+.dp-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px}
+.tc-marks{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.dp-form{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dp-form[hidden]{display:none}
+.dp-form .marktime{font-weight:900;color:var(--ink-soft);white-space:nowrap;font-size:12px}
+.dp-form input[type=text]{flex:1;min-width:120px;border:0;border-radius:999px;padding:6px 13px;
+  font-family:var(--font);font-size:12.5px;font-weight:800;color:var(--ink);
+  background:var(--bg);box-shadow:var(--clay-in-light),inset 0 -2px 5px rgba(93,63,43,.12)}
+.dp-form input[type=text]:focus{outline:0;background:var(--butter)}
+.dp-form input[type=text]::placeholder{font-weight:700;color:var(--ink-soft);opacity:.75}
+.dp-foot{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding-top:10px;
+  border-top:1px dashed rgba(93,63,43,.18);font-size:12px}
+.dp-foot .hint{margin-right:auto}
+.dp-link{border:0;background:none;padding:0;font-family:var(--font);font-size:12px;font-weight:900;
+  color:var(--ink-soft);cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+.dp-link:hover{color:var(--ink)}
+.dp-link.danger{color:var(--coral-deep)}
+.hint{font-size:12.5px;color:var(--ink-soft)}
+.mark{display:inline-flex;align-items:center;gap:3px}
+.markbtn{border:0;border-radius:999px;padding:5px 11px;font-family:var(--font);font-size:12px;font-weight:800;
+  color:var(--ink);background:var(--bg);cursor:pointer;
+  box-shadow:var(--clay-in-light),var(--clay-in-dark);
+  transition:transform .16s var(--spring),background .16s}
+.markbtn:hover{transform:translateY(-1px);background:var(--butter)}
+.markbtn:active{transform:scale(.94)}
+.mark .del{cursor:pointer;color:var(--coral-deep);font-size:15px;font-weight:900;padding:0 2px;line-height:1}
+#audio{display:none}
+
+/* ---- 轻提示 ---- */
+.toast{position:fixed;left:50%;bottom:calc(var(--dock-h) + 30px);transform:translate(-50%,12px);z-index:90;
+  background:var(--ink);color:var(--bg);font-size:13px;font-weight:800;padding:9px 18px;border-radius:999px;
+  opacity:0;pointer-events:none;transition:opacity .2s,transform .25s var(--spring)}
+.toast.show{opacity:.94;transform:translate(-50%,0)}
+
+/* 页脚贴底：内容短时不再在页脚下方留一条空带；底部给播放坞留安全区 */
+.footer{margin-top:auto}
+.footer-inner{padding-bottom:calc(var(--dock-h) + 16px)}
+
+@media (max-width:600px){
+  .wrap{padding:18px 14px calc(var(--dock-h) + 24px)}
+  .exbar{margin:0 -14px 12px;padding:8px 14px}
+  /* 窄屏：标题跟返回键占第一行（完整可读），页码和统计一起落到第二行 */
+  .exbar .ttl{font-size:16px;min-width:180px}
+  .pgnav{order:2}
+  .pgpop{left:0;right:auto}
+  .exbar .meta{order:3;flex:1 1 auto;margin-top:0}
+  .paper{padding:12px 14px}
+  .text{font-size:16.5px;line-height:2}
+  .pg{min-width:32px;height:32px;font-size:12px}
+  .score-chip{margin-left:0}
+  :root{--dock-h:68px}
+  .dock{bottom:8px;padding:6px 9px;border-radius:18px}
+  .dock-row{gap:6px}
+  .dock-rate{display:none}
+  .dock-replay{padding:6px 8px}
+  .fab{bottom:calc(var(--dock-h) + 10px);right:12px}
+}
+@media (max-width:380px){
+  .mb-nav,.dock-more{width:28px;height:28px}
+  .dock-replay{padding:6px 7px;font-size:11px}
+  .dock-track{min-width:40px}
+}
+@media (min-width:1040px){
+  .fab{top:50%;bottom:auto;right:calc(50vw - 500px);transform:translateY(-50%)}
+  .fab-panel{top:50%;bottom:auto;transform:translateY(-50%) scale(.97);transform-origin:right center}
+  .fab.open .fab-panel{transform:translateY(-50%)}
+}
+@media (prefers-reduced-motion: reduce){
+  .paper,.actionbar,.ppage,.dock{animation:none}
+  .fab-panel,.toast,.dock-panel,.pgpop{transition:none}
+}
+</style>
+</head>
+<body data-page="english">
+
+<div class="wrap">
+  <div class="exbar">
+    <a class="clay-btn ghost small" href="../../listening.html">← 回听力区</a>
+    <h1 class="ttl" id="ex-title">听力练习</h1>
+    <div class="pgnav">
+      <button class="pg" id="prevPage" type="button" title="上一页">‹</button>
+      <button class="pg pgnum" id="pageno" type="button" aria-haspopup="true" aria-expanded="false" title="跳到任意页">1 / 1</button>
+      <button class="pg" id="nextPage" type="button" title="下一页">›</button>
+      <div class="pgpop" id="pgnums" hidden></div>
+    </div>
+    <span class="meta" id="ex-meta"></span>
+  </div>
+
+  <div class="clay-card paper" id="pages" data-no-tilt></div>
+
+  <div class="actionbar">
+    <button class="clay-btn" id="check">✅ 判分</button>
+    <button class="clay-btn ghost small" id="show" title="显示全部答案；双击某一个空格可以只看这一个">👀 看答案</button>
+    <button class="clay-btn ghost small" id="clear">🧽 清空</button>
+    <span class="hint peek-hint">双击空格 = 只看这一个词</span>
+    <span class="score-chip" id="score" style="display:none"></span>
+  </div>
+</div>
+
+<!-- 浮动设置球 -->
+<div class="fab" id="fab">
+  <div class="fab-panel" id="fabPanel">
+    <div class="fp-head"><span>⚙ 练习设置</span><button class="fp-close" id="fpClose" type="button" title="收起">×</button></div>
+
+    <div class="fp-group">
+      <div class="fp-label">每页</div>
+      <div class="fp-chips" id="pageChips">
+        <button class="opt" type="button" data-page="q">一页一材料</button>
+        <button class="opt" type="button" data-page="1">1 段</button>
+        <button class="opt" type="button" data-page="2">2 段</button>
+        <button class="opt" type="button" data-page="3">3 段</button>
+        <button class="opt" type="button" data-page="4">4 段</button>
+      </div>
+    </div>
+
+    <div class="fp-group">
+      <div class="fp-label">每段设置</div>
+      <div class="fp-chips" id="segChips">
+        <button class="opt" type="button" data-seg="full">无限制</button>
+        <button class="opt" type="button" data-seg="pause">按停顿</button>
+        <button class="opt" type="button" data-seg="1">逐句</button>
+        <button class="opt" type="button" data-seg="4">4 句</button>
+        <button class="opt" type="button" data-seg="8">8 句</button>
+        <button class="opt" type="button" data-seg="12">12 句</button>
+      </div>
+    </div>
+
+    <div class="fp-group">
+      <div class="fp-label">播放速度</div>
+      <div class="fp-chips" id="rateChips">
+        <button class="opt" type="button" data-rate="0.5">0.5x</button>
+        <button class="opt" type="button" data-rate="0.75">0.75x</button>
+        <button class="opt" type="button" data-rate="1">1.0x</button>
+        <button class="opt" type="button" data-rate="1.25">1.25x</button>
+        <button class="opt" type="button" data-rate="1.5">1.5x</button>
+      </div>
+    </div>
+
+    <div class="fp-group">
+      <div class="fp-label">音量</div>
+      <div class="fp-row fp-vol">
+        <span id="volIcon">🔊</span>
+        <input type="range" id="volume" min="0" max="100" step="5" value="100" aria-label="音量">
+        <span class="vol-val" id="volVal">100%</span>
+      </div>
+    </div>
+
+    <div class="fp-group">
+      <div class="fp-label">挖空密度</div>
+      <div class="fp-chips" id="blankChips">
+        <button class="opt" type="button" data-blank="low">少</button>
+        <button class="opt" type="button" data-blank="mid">中</button>
+        <button class="opt" type="button" data-blank="high">多</button>
+        <button class="opt" type="button" data-blank="max">极多</button>
+      </div>
+    </div>
+
+    <div class="fp-group">
+      <button class="fp-more" id="advToggle" type="button">高级 ›</button>
+      <div class="fp-adv" id="advBox" hidden>
+        <div class="fp-row"><span>挖空方式</span>
+          <span class="fp-chips" id="modeChips">
+            <button class="opt" type="button" data-mode="random">随机</button>
+            <button class="opt" type="button" data-mode="everyN">每隔 N 词</button>
+            <button class="opt" type="button" data-mode="rare">生词优先</button>
+          </span>
+        </div>
+        <div class="fp-row"><span>每隔</span><input type="number" id="everyN" min="1" max="30" value="7"><span>个词挖一个</span></div>
+        <div class="fp-chips">
+          <button class="opt" type="button" id="skipChip">跳过短词</button>
+          <button class="opt" type="button" id="followChip">自动滚到当前句</button>
+        </div>
+        <div class="fp-row"><span>自定义段长</span><input type="number" id="customSeg" min="1" max="12" value="5">
+          <button class="opt" type="button" id="applyCustom">应用</button></div>
+        <div class="fp-chips"><button class="opt" type="button" id="reblank">🔁 重新挖空</button></div>
+      </div>
+    </div>
+  </div>
+
+  <button class="fab-btn" id="fabBtn" type="button" aria-expanded="false" aria-controls="fabPanel" title="练习设置">⚙</button>
+</div>
+
+<!-- 底部播放坞：全页唯一播放入口 -->
+<div class="dock" id="dock">
+  <div class="dock-panel" id="dockPanel" hidden>
+    <div class="dp-head"><span>📍 跳转点与进度</span><button class="dp-close" id="dockClose" type="button" title="收起">×</button></div>
+    <div class="dp-row">
+      <button class="markbtn" id="addMark" type="button">📍 在当前位置打点</button>
+      <span id="marks" class="tc-marks"></span>
+    </div>
+    <div class="dp-form" id="markForm" hidden>
+      <span class="marktime" id="markTime"></span>
+      <input type="text" id="markLabel" placeholder="起个名字，如：第 3 段开始">
+      <button class="dp-link" id="markCancel" type="button">取消</button>
+      <button class="clay-btn small" id="markOk" type="button">保存</button>
+    </div>
+    <div class="dp-foot">
+      <span class="hint" id="progInfo">自动保存：播放位置 · 页码 · 答案 · 跳转点</span>
+      <button class="dp-link" id="saveNow" type="button">立即保存</button>
+      <button class="dp-link danger" id="clearProg" type="button">清除进度</button>
+    </div>
+  </div>
+
+  <div class="dock-row">
+    <button class="mb-nav" id="mb-prev" type="button" title="上一句">⏮</button>
+    <button class="mb-main" id="mb-play" type="button" title="播放 / 暂停">▶</button>
+    <button class="mb-nav" id="mb-next" type="button" title="下一句">⏭</button>
+    <button class="dock-replay" id="mb-replay" type="button" title="从本句 / 本段开头重播"><span>↻</span><span id="mb-replay-t">本句</span></button>
+    <div class="dock-track">
+      <div class="dock-time"><span class="now" id="mb-time">0:00</span><span class="sep">/</span><span id="tcTime">0:00</span></div>
+      <div class="dock-seek">
+        <span class="dock-fill" id="seekFill"></span>
+        <input type="range" id="seek" min="0" max="1000" step="1" value="0" aria-label="播放进度">
+        <div class="dock-pins" id="pins"></div>
+      </div>
+    </div>
+    <button class="dock-rate" id="tcRate" type="button" title="切换播放速度">1.0x</button>
+    <button class="dock-more" id="dockMore" type="button" aria-expanded="false" aria-controls="dockPanel" title="跳转点与进度">⋯</button>
+  </div>
+  <audio id="audio" preload="metadata"></audio>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer class="footer">
+  <svg class="footer-wave" viewBox="0 0 1440 46" preserveAspectRatio="none" aria-hidden="true">
+    <path d="M0,46 C240,6 480,6 720,26 C960,46 1200,10 1440,30 L1440,46 Z" fill="#F3E3CC"/>
+  </svg>
+  <div class="footer-inner">
+    <div class="footer-logo"><span class="ava">🐟</span><span>{{SITE_NAME}}</span></div>
+    <div class="footer-links">
+      {{FOOTER_LINKS}}
+    </div>
+    {{COPYRIGHT_LINE}}
+  </div>
+</footer>
+
+<script src="data.js"></script>
+<script src="../../../js/clay.js"></script>
+<script>
+/* ============================================================
+   听力练习页（v4）
+   - 正文为唯一主角；段长/速度/挖空/播放器全收进右下浮动设置球
+   - 设置全站共享（localStorage: listen-settings-v1），进度按练习独立（listen2.<hash>）
+   - 段长 1~12 句可选（另支持自定义），填空 id 用「全局句号.词号」，改段长不丢答案
+   数据：window.__EXERCISE__ = { title, audio, paragraphsPerPage,
+          paragraphs:[{sentences:[{start,end,words:[{w,s,e}],zh}]}] }
+   ============================================================ */
+(function () {
+  "use strict";
+  var EX = window.__EXERCISE__ || {};
+  var PARAS = EX.paragraphs || [];
+  var FLAT = [];
+  PARAS.forEach(function (p) {
+    p.sentences.forEach(function (s) { s._fi = FLAT.length; FLAT.push(s); });
+  });
+
+  var SEGS = [], PAGES = [], NP = 1;
+  var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var $ = function (id) { return document.getElementById(id); };
+  var audio = $("audio");
+
+  var page = 0, curSen = null, loopSeg = null;
+  var MARKS = [], STORE_KEY = null, SET_KEY = "listen-settings-v2";
+  var lastAuto = 0, saveTimer = null, toastTimer = null;
+  var holdPage = false;      /* 手动翻页后先不跟着音频自动跳页 */
+
+  /* 全站共享的设置：page = 每页放什么，seg = 段内怎么切 */
+  var SET = { page: "q", seg: "full", rate: 1, volume: 1, follow: true, blank: "mid", mode: "random", skip: true, everyN: 7 };
+  var DENSITY = { low: 25, mid: 45, high: 70, max: 95 };
+  var DENSITY_LABEL = { low: "少（25%）", mid: "中（45%）", high: "多（70%）", max: "极多（95%，接近默写）" };
+
+  /* ---------- 工具 ---------- */
+  function norm(w) { return w.toLowerCase().replace(/[^a-z0-9']/g, ""); }
+  function fmt(sec) { sec = Math.max(0, Math.round(sec)); return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0"); }
+  /* 填空框宽度：按「答案」和「已输入的文本」实际像素宽度自适应 */
+  var MEAS = null;
+  function textW(t) {
+    t = t || "";
+    if (!MEAS) {
+      MEAS = document.createElement("span");
+      MEAS.style.cssText = "position:absolute;left:-9999px;top:0;visibility:hidden;white-space:pre;font-weight:700;font-size:16px;font-family:" +
+        (getComputedStyle(document.body).fontFamily || "sans-serif");
+      document.body.appendChild(MEAS);
+    }
+    MEAS.textContent = t;
+    return MEAS.getBoundingClientRect().width;
+  }
+  function fitBlank(inp, forAnswer) {
+    var v = forAnswer ? (inp.dataset.ans || "") : (inp.value || "");
+    /* 空着就是默认小方块（删空即缩回）；有内容才按实际像素加宽，打多长显示多长 */
+    inp.style.width = v.trim() ? Math.ceil(textW(v) + 18) + "px" : "64px";
+  }
+  /* 跳转播放：等元数据就绪再设 currentTime，避免「点哪段都从头播」 */
+  function seekPlay(t) {
+    holdPage = false;
+    var go = function () {
+      try { audio.currentTime = Math.max(0, t); } catch (e) {}
+      var p = audio.play();
+      if (p && p.catch) p.catch(function () {});
+    };
+    if (audio.readyState >= 1) go();
+    else audio.addEventListener("loadedmetadata", go, { once: true });
+  }
+  function hash(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0; return h.toString(36); }
+  var STOP = new Set(("a an the and or but if then else of to in on at by for with from as is are was were be been being am do does did have has had i you he she it we they me him her us them my your his their our its this that these those not no will would can could should may might must shall too very just so such up down out off over under again more most other some any all each every both few little much who whom which what when where why how").split(" "));
+
+  function toast(msg) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove("show"); }, 2200);
+  }
+
+  /* ---------- 标题与时长 ---------- */
+  document.title = (EX.title || "听力练习") + " · " + {{SITE_NAME_JSON}};
+  $("ex-title").textContent = EX.title || "听力练习";
+  var totalDur = 0;
+  FLAT.forEach(function (s) { if (s.end > totalDur) totalDur = s.end; });
+  if (EX.audio) audio.src = EX.audio;
+
+  /* ---------- 设置持久化（全站共享） ---------- */
+  function loadSettings() {
+    try {
+      var raw = localStorage.getItem(SET_KEY);
+      if (!raw) return;
+      var o = JSON.parse(raw);
+      for (var k in SET) { if (o[k] !== undefined && o[k] !== null) SET[k] = o[k]; }
+      /* 已下线的段长（2 / 3 / 6 句）回落到 4 句，免得设置里没有任何一项高亮 */
+      if (["2", "3", "6"].indexOf(String(SET.seg)) >= 0) SET.seg = "4";
+    } catch (e) {}
+  }
+  function saveSettings() {
+    try { localStorage.setItem(SET_KEY, JSON.stringify(SET)); } catch (e) {}
+  }
+  function syncChips() {
+    var pageBtns = $("pageChips").querySelectorAll(".opt");
+    for (var p = 0; p < pageBtns.length; p++) pageBtns[p].classList.toggle("on", pageBtns[p].dataset.page === String(SET.page));
+    var segBtns = $("segChips").querySelectorAll(".opt");
+    for (var i = 0; i < segBtns.length; i++) segBtns[i].classList.toggle("on", segBtns[i].dataset.seg === String(SET.seg));
+    var rateBtns = $("rateChips").querySelectorAll(".opt");
+    for (var j = 0; j < rateBtns.length; j++) rateBtns[j].classList.toggle("on", Number(rateBtns[j].dataset.rate) === Number(SET.rate));
+    var blankBtns = $("blankChips").querySelectorAll(".opt");
+    for (var k = 0; k < blankBtns.length; k++) blankBtns[k].classList.toggle("on", blankBtns[k].dataset.blank === SET.blank);
+    var modeBtns = $("modeChips").querySelectorAll(".opt");
+    for (var m = 0; m < modeBtns.length; m++) modeBtns[m].classList.toggle("on", modeBtns[m].dataset.mode === SET.mode);
+    $("skipChip").classList.toggle("on", !!SET.skip);
+    $("followChip").classList.toggle("on", !!SET.follow);
+    $("everyN").value = SET.everyN;
+    $("everyN").disabled = SET.mode !== "everyN";
+    audio.playbackRate = Number(SET.rate) || 1;
+    $("tcRate").textContent = (Number(SET.rate) === 1 ? "1.0" : String(SET.rate)) + "x";
+    var vol = Number(SET.volume);
+    if (!isFinite(vol) || vol < 0) vol = 0;
+    if (vol > 1) vol = 1;
+    SET.volume = vol;
+    audio.volume = vol;
+    var volPct = Math.round(vol * 100);
+    $("volume").value = volPct;
+    $("volVal").textContent = volPct + "%";
+    $("volIcon").textContent = volPct === 0 ? "🔇" : (volPct < 50 ? "🔉" : "🔊");
+    saveSettings();
+  }
+
+  /* ---------- 材料：播报标记硬断 ---------- */
+  var QBREAK = /^(Questions?|Section|Conversation|Passage|Recording)\b/i;
+  function buildMats() {
+    var mats = [], cur = [];
+    FLAT.forEach(function (s) {
+      if (cur.length && QBREAK.test((s.text || "").trim())) { mats.push(cur); cur = []; }
+      cur.push(s);
+    });
+    if (cur.length) mats.push(cur);
+    return mats;
+  }
+
+  /* ---------- 每段设置：无限制 / 按停顿 / 每 N 句 ---------- */
+  var PAGE_CAP = 24;      /* 一页最多句数；「无限制」就按它把段填满 */
+  function splitMaterial(arr) {
+    var res = [], i;
+    if (SET.seg === "full") {
+      for (i = 0; i < arr.length; i += PAGE_CAP) res.push(arr.slice(i, i + PAGE_CAP));
+      return res;
+    }
+    if (SET.seg !== "pause") {
+      var n = Math.min(12, Math.max(1, parseInt(SET.seg, 10) || 1));
+      for (i = 0; i < arr.length; i += n) res.push(arr.slice(i, i + n));
+      return res;
+    }
+    var part = [], t0 = arr[0].start;
+    arr.forEach(function (s) {
+      if (part.length) {
+        var prev = part[part.length - 1];
+        if (s.start - prev.end > 1.5 || part.length >= 4 || prev.end - t0 > 40) {
+          res.push(part); part = []; t0 = s.start;
+        }
+      }
+      part.push(s);
+    });
+    if (part.length) res.push(part);
+    return res;
+  }
+
+  /* ---------- 组装段与页 ---------- */
+  function buildSegs() {
+    SEGS = []; PAGES = [];
+    var mats = buildMats();
+    mats.forEach(function (m) {
+      var units = splitMaterial(m).map(function (u) { return { sentences: u }; });
+      if (SET.page !== "q") { units.forEach(function (u) { SEGS.push(u); }); return; }
+      /* 一页一材料：超过 PAGE_CAP 句就在段边界处分页，标注「本材料 k/n」 */
+      var chunks = [], cur = [], cnt = 0;
+      units.forEach(function (u) {
+        if (cnt && cnt + u.sentences.length > PAGE_CAP) { chunks.push(cur); cur = []; cnt = 0; }
+        cur.push(u); cnt += u.sentences.length;
+      });
+      if (cur.length) chunks.push(cur);
+      chunks.forEach(function (c, ci) {
+        c.forEach(function (u) { SEGS.push(u); });
+        PAGES.push({ segs: c, sub: chunks.length > 1 ? (ci + 1) + "/" + chunks.length : null });
+      });
+    });
+    if (SET.page !== "q") {
+      var per = Math.max(1, parseInt(SET.page, 10) || 1);
+      for (var j = 0; j < SEGS.length; j += per) PAGES.push({ segs: SEGS.slice(j, j + per), sub: null });
+    }
+    NP = Math.max(PAGES.length, 1);
+    page = Math.min(page, NP - 1);
+    $("ex-meta").textContent = "共 " + SEGS.length + " 段 · " + NP + " 页 · 约 " + fmt(totalDur);
+  }
+
+  /* ---------- 挖空 ---------- */
+  var BLANKS = {};
+  function densityVal() {
+    if (SET.mode === "everyN") return Math.min(30, Math.max(1, parseInt(SET.everyN, 10) || 7));
+    return DENSITY[SET.blank] || 45;
+  }
+  function blankSelection() {
+    var mode = SET.mode, skip = !!SET.skip, d = densityVal();
+    var all = [], freq = {};
+    FLAT.forEach(function (s) {
+      (s.words || []).forEach(function (w, wi) {
+        if (!/[A-Za-z0-9]/.test(w.w)) return;
+        var low = w.w.toLowerCase();
+        freq[low] = (freq[low] || 0) + 1;
+        all.push({ id: s._fi + "." + wi, low: low, len: w.w.length });
+      });
+    });
+    all.forEach(function (o) { o.f = freq[o.low]; });
+    var sel = {};
+    if (mode === "everyN") {
+      var N = d, counter = 0;
+      all.forEach(function (o) {
+        if (skip && (o.len < 3 || STOP.has(o.low))) return;
+        counter++; if (counter % N === 0) sel[o.id] = 1;
+      });
+    } else if (mode === "rare") {
+      var cands = all.filter(function (o) { return !(skip && (o.len < 4 || STOP.has(o.low))); });
+      cands.sort(function (a, b) { return (a.f - b.f) || (b.len - a.len); });
+      var k = Math.max(1, Math.floor(d / 100 * cands.length));
+      cands.slice(0, k).forEach(function (o) { sel[o.id] = 1; });
+    } else {
+      all.forEach(function (o) {
+        if (skip && (o.len < 3 || STOP.has(o.low))) return;
+        if (Math.random() < d / 100) sel[o.id] = 1;
+      });
+    }
+    return sel;
+  }
+
+  /* ---------- 渲染正文 ---------- */
+  var SENTENCES = [];       /* {el,start,end,page} 跟听高亮 */
+  function appendWords(host, s, sel) {
+    (s.words || []).forEach(function (w, wi) {
+      var gid = s._fi + "." + wi;
+      if (sel[gid]) {
+        BLANKS[gid] = w.w;
+        var inp = document.createElement("input");
+        inp.className = "blank"; inp.dataset.id = gid; inp.dataset.ans = w.w;
+        fitBlank(inp);
+        inp.setAttribute("aria-label", "填空");
+        inp.setAttribute("autocomplete", "off");
+        inp.setAttribute("autocorrect", "off");
+        inp.setAttribute("autocapitalize", "off");
+        inp.spellcheck = false;
+        host.appendChild(inp);
+      } else {
+        host.appendChild(document.createTextNode(w.w));
+      }
+      host.appendChild(document.createTextNode(" "));
+    });
+    if (!s.words || !s.words.length) host.textContent = s.text || "";
+  }
+
+  function renderPages(sel) {
+    var host = $("pages"); host.innerHTML = ""; SENTENCES = []; BLANKS = {};
+    PAGES.forEach(function (pgo, pi) {
+      var pg = document.createElement("div");
+      pg.className = "ppage"; pg.hidden = pi !== 0;
+      if (pgo.sub) {
+        var sub = document.createElement("div");
+        sub.className = "pgsub"; sub.textContent = "本材料 · " + pgo.sub;
+        pg.appendChild(sub);
+      }
+      pgo.segs.forEach(function (seg) {
+        var sents = seg.sentences;
+        var multi = sents.length > 1;
+        var box = document.createElement("div");
+        box.className = "seg";
+        var t0 = sents[0].start, t1 = sents[sents.length - 1].end;
+        var bar = document.createElement("div"); bar.className = "segbar";
+        bar.innerHTML = '<button class="segbtn play" type="button">▶ ' + (multi ? ("本段 · " + sents.length + " 句") : "本句") + '</button>' +
+          '<button class="segbtn loopBtn" type="button" title="循环' + (multi ? "本段" : "这句") + '">🔁</button>' +
+          '<span class="time">' + fmt(t0) + ' – ' + fmt(t1) + '</span>';
+        var hasZh = sents.some(function (s) { return s.zh; });
+        if (hasZh) {
+          var zb = document.createElement("button");
+          zb.className = "segbtn zhBtn"; zb.type = "button"; zb.textContent = "中";
+          bar.appendChild(zb);
+        }
+        var text = document.createElement("div"); text.className = "text";
+        var zhs = [], spans = [];
+        sents.forEach(function (s) {
+          var sp = document.createElement("span"); sp.className = "srun";
+          text.appendChild(sp); text.appendChild(document.createTextNode(" "));
+          spans.push(sp);
+          appendWords(sp, s, sel);
+          if (s.zh) {
+            var zh = document.createElement("span"); zh.className = "zh hidden"; zh.textContent = s.zh;
+            sp.appendChild(zh); zhs.push(zh);
+          }
+        });
+        box.appendChild(bar); box.appendChild(text);
+        bar.querySelector(".play").addEventListener("click", function () { seekPlay(t0); });
+        bar.querySelector(".loopBtn").addEventListener("click", function () {
+          var on = !box.classList.contains("looping");
+          box.classList.toggle("looping", on);
+          if (on) { loopSeg = { start: t0, end: t1 }; seekPlay(t0); }
+          else if (loopSeg && loopSeg.start === t0) { loopSeg = null; }
+        });
+        var zhB = bar.querySelector(".zhBtn");
+        if (zhB) zhB.addEventListener("click", function () {
+          var on = !text.classList.contains("zh-on");
+          text.classList.toggle("zh-on", on);
+          zhB.classList.toggle("on", on);
+          zhs.forEach(function (z) { z.classList.toggle("hidden", !on); });
+        });
+        pg.appendChild(box);
+        sents.forEach(function (s, idx) {
+          SENTENCES.push({ el: spans[idx], idx: s._fi, start: s.start, end: s.end, page: pi, segStart: t0, segLen: sents.length });
+        });
+      });
+      host.appendChild(pg);
+    });
+    showPage(page, false);
+  }
+
+  /* ---------- 翻页：页码弹层（全部页号，超出高度可滚） ---------- */
+  function renderPager() {
+    var box = $("pgnums"); box.innerHTML = "";
+    for (var v = 0; v < NP; v++) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "pg";
+      b.textContent = String(v + 1);
+      b.title = "第 " + (v + 1) + " 页";
+      if (v === page) b.classList.add("on");
+      b.addEventListener("click", (function (k) { return function () { showPage(k, true); closePop(); }; })(v));
+      box.appendChild(b);
+    }
+    $("pageno").textContent = (page + 1) + " / " + NP;
+    $("pageno").title = "第 " + (page + 1) + " / " + NP + " 页 · 点这里跳到任意页";
+    $("prevPage").disabled = page === 0;
+    $("nextPage").disabled = page === NP - 1;
+  }
+
+  /* 页码弹层：点中间的「n / N」开合，点外面或按 Esc 收起 */
+  function closePop() {
+    $("pgnums").hidden = true;
+    $("pageno").setAttribute("aria-expanded", "false");
+  }
+  function togglePop() {
+    var willOpen = $("pgnums").hidden;
+    $("pgnums").hidden = !willOpen;
+    $("pageno").setAttribute("aria-expanded", willOpen ? "true" : "false");
+  }
+  $("pageno").addEventListener("click", function (e) { e.stopPropagation(); togglePop(); });
+  $("pgnums").addEventListener("click", function (e) { e.stopPropagation(); });
+  document.addEventListener("click", function () { closePop(); });
+
+  /* 翻页只换内容，不碰滚动位置：吸顶栏常驻，连续点也不会跳 */
+  function showPage(n, manual) {
+    page = Math.max(0, Math.min(NP - 1, n));
+    var pgs = document.querySelectorAll(".ppage");
+    for (var i = 0; i < pgs.length; i++) pgs[i].hidden = i !== page;
+    document.querySelectorAll(".srun.cur").forEach(function (el) { el.classList.remove("cur"); });
+    document.querySelectorAll(".seg.looping").forEach(function (el) { el.classList.remove("looping"); });
+    curSen = null; loopSeg = null;
+    var segMulti = PAGES[page].segs.some(function (g) { return g.sentences.length > 1; });
+    $("mb-replay-t").textContent = segMulti ? "本段" : "本句";
+    renderPager();
+    if (manual !== false) holdPage = true;
+    updateFollow(true);
+    saveState(true);
+  }
+  $("prevPage").addEventListener("click", function () { showPage(page - 1, true); });
+  $("nextPage").addEventListener("click", function () { showPage(page + 1, true); });
+  document.addEventListener("keydown", function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    var tag = document.activeElement && document.activeElement.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    if (e.key === " " || e.code === "Space") {
+      if (tag === "BUTTON") return;          /* 焦点在按钮上时，空格交给按钮自己 */
+      e.preventDefault();                    /* 别让空格把页面滚下去 */
+      $("mb-play").click();
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault(); stepSen(-1);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault(); stepSen(1);
+    } else if (e.key === "PageUp") {
+      e.preventDefault(); showPage(page - 1, true);
+    } else if (e.key === "PageDown") {
+      e.preventDefault(); showPage(page + 1, true);
+    }
+  });
+
+  /* ---------- 跟听 ---------- */
+  function updateFollow(force) {
+    if (!SENTENCES.length) return;
+    var t = audio.currentTime, found = null;
+    for (var i = 0; i < SENTENCES.length; i++) {
+      var s = SENTENCES[i];
+      if (t >= s.start && t < s.end) { found = s; break; }
+    }
+    /* 播到下一段材料（下一页）时自动翻页；手动翻过页就先不跟，等用户再点播放/跳转 */
+    if (!force && !holdPage && !audio.paused && found && found.page !== page) {
+      showPage(found.page, false);
+      var typing0 = document.activeElement && document.activeElement.tagName === "INPUT";
+      if (SET.follow && !reduce && !typing0) found.el.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+    if (found !== curSen || force) {
+      if (curSen) curSen.el.classList.remove("cur");
+      curSen = found;
+      if (curSen) {
+        curSen.el.classList.add("cur");
+        var typing = document.activeElement && document.activeElement.tagName === "INPUT";
+        if (SET.follow && !reduce && !force && !typing) {
+          curSen.el.scrollIntoView({ block: "center", behavior: "smooth" });
+        }
+      }
+    }
+  }
+
+  /* 播放坞：自绘细轨 + 时间 */
+  var dragging = false;
+  function dur() { return isFinite(audio.duration) && audio.duration > 0 ? audio.duration : totalDur; }
+  function paintSeek(p) { $("seekFill").style.width = (p / 10) + "%"; }
+  function syncTransport() {
+    var d = dur();
+    $("tcTime").textContent = fmt(d);
+    $("mb-time").textContent = fmt(audio.currentTime);
+    if (!dragging) {
+      var p = Math.round(audio.currentTime / Math.max(1, d) * 1000);
+      $("seek").value = p;
+      paintSeek(p);
+    }
+  }
+  $("seek").addEventListener("pointerdown", function () { dragging = true; });
+  $("seek").addEventListener("pointerup", function () { dragging = false; syncTransport(); });
+  $("seek").addEventListener("change", function () { dragging = false; syncTransport(); });
+  $("seek").addEventListener("input", function () {
+    var d = dur();
+    if (!d) return;
+    holdPage = false;
+    var p = Number(this.value) || 0;
+    try { audio.currentTime = p / 1000 * d; } catch (e) {}
+    $("mb-time").textContent = fmt(p / 1000 * d);
+    paintSeek(p);
+  });
+  audio.addEventListener("loadedmetadata", function () { syncTransport(); renderPins(); });
+  audio.addEventListener("timeupdate", function () {
+    if (loopSeg && !audio.paused && audio.currentTime >= loopSeg.end) { audio.currentTime = loopSeg.start; }
+    updateFollow(false);
+    syncTransport();
+    if (!audio.paused && Date.now() - lastAuto > 8000) { lastAuto = Date.now(); saveState(true); }
+  });
+  audio.addEventListener("play", function () { $("mb-play").textContent = "⏸"; });
+  audio.addEventListener("pause", function () { $("mb-play").textContent = "▶"; saveState(true); });
+  window.addEventListener("beforeunload", function () { saveState(true); });
+
+  /* ---------- 播放坞：播放 / 上一句 / 下一句 / 本句重播 ---------- */
+  $("mb-play").addEventListener("click", function () {
+    if (audio.paused) { loopSeg = null; holdPage = false; audio.play(); } else audio.pause();
+  });
+  $("mb-replay").addEventListener("click", function () {
+    /* 真·本段：从当前句所在段的段首重播；没有当前句就取本页第一段 */
+    var t;
+    if (curSen && curSen.page === page) t = curSen.segStart;
+    else {
+      var f = null;
+      for (var i = 0; i < SENTENCES.length; i++) if (SENTENCES[i].page === page) { f = SENTENCES[i]; break; }
+      t = f ? f.segStart : (MARKS.length ? MARKS[MARKS.length - 1].t : 0);
+    }
+    seekPlay(t);
+  });
+  /* 上一句 / 下一句：按句时间轴走，跨页时自动翻页 */
+  function curIdx() {
+    if (curSen) return curSen.idx;
+    var t = audio.currentTime, best = -1, bestD = Infinity;
+    SENTENCES.forEach(function (s) {
+      if (s.page !== page) return;
+      var d = Math.abs(s.start - t);
+      if (d < bestD) { bestD = d; best = s.idx; }
+    });
+    return best;
+  }
+  function stepSen(dir) {
+    var i = curIdx();
+    if (i < 0) return;
+    var j = Math.max(0, Math.min(FLAT.length - 1, i + dir));
+    if (j === i) return;
+    var pg = page;
+    for (var k = 0; k < SENTENCES.length; k++) if (SENTENCES[k].idx === j) { pg = SENTENCES[k].page; break; }
+    if (pg !== page) showPage(pg, true);
+    seekPlay(FLAT[j].start);
+  }
+  $("mb-prev").addEventListener("click", function () { stepSen(-1); });
+  $("mb-next").addEventListener("click", function () { stepSen(1); });
+
+  /* 倍速：点一下切下一档（完整档位在设置球里） */
+  var RATES = [0.5, 0.75, 1, 1.25, 1.5];
+  $("tcRate").addEventListener("click", function () {
+    var i = RATES.indexOf(Number(SET.rate));
+    if (i < 0) i = 2;
+    SET.rate = RATES[(i + 1) % RATES.length];
+    syncChips();
+    toast("播放速度 " + (Number(SET.rate) === 1 ? "1.0" : SET.rate) + "x");
+  });
+
+  /* 展开面板：跳转点 / 自动保存 / 清除进度 */
+  var dockPanel = $("dockPanel"), dockMore = $("dockMore");
+  function setDockPanel(open) {
+    dockPanel.hidden = !open;
+    dockMore.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open) { setFab(false); renderMarks(); }
+  }
+  dockMore.addEventListener("click", function (e) { e.stopPropagation(); setDockPanel(dockPanel.hidden); });
+  dockPanel.addEventListener("click", function (e) { e.stopPropagation(); });
+  $("dockClose").addEventListener("click", function () { setDockPanel(false); });
+  document.addEventListener("click", function (e) {
+    if (!dockPanel.hidden && !dockPanel.contains(e.target)) setDockPanel(false);
+  });
+
+  /* ---------- 浮动球 ---------- */
+  var fab = $("fab"), fabBtn = $("fabBtn"), hideTimer = null;
+  function setFab(open) {
+    fab.classList.toggle("open", open);
+    fabBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    if (open && !dockPanel.hidden) setDockPanel(false);
+  }
+  fabBtn.addEventListener("click", function () { setFab(!fab.classList.contains("open")); });
+  $("fpClose").addEventListener("click", function () { setFab(false); });
+  fab.addEventListener("pointerenter", function (e) { if (e.pointerType === "mouse") { clearTimeout(hideTimer); setFab(true); } });
+  fab.addEventListener("pointerleave", function (e) {
+    if (e.pointerType === "mouse") { hideTimer = setTimeout(function () { setFab(false); }, 280); }
+  });
+  document.addEventListener("keydown", function (e) {
+    if (e.key === "Escape") { setFab(false); closePop(); setDockPanel(false); }
+  });
+  document.addEventListener("click", function (e) {
+    if (!fab.contains(e.target) && fab.classList.contains("open")) setFab(false);
+  });
+
+  /* ---------- 设置项事件 ---------- */
+  function rebuildBlanks(msg) {
+    var kept = collect(), n = Object.keys(kept).length;
+    renderPages(blankSelection());
+    applyAnswers(kept);
+    $("score").style.display = "none";
+    showPage(page, false);
+    saveState(true);
+    if (msg) toast(msg + "（共 " + Object.keys(BLANKS).length + " 空" + (n ? "，保留 " + n + " 个已填" : "") + "）");
+  }
+  function changeSeg() {
+    var kept = collect();
+    buildSegs();
+    renderPages(BLANKS);
+    applyAnswers(kept);
+    $("score").style.display = "none";
+    showPage(page, false);
+    saveState(true);
+  }
+
+  $("pageChips").addEventListener("click", function (e) {
+    var b = e.target.closest(".opt"); if (!b) return;
+    SET.page = b.dataset.page;
+    syncChips(); changeSeg();
+  });
+  $("segChips").addEventListener("click", function (e) {
+    var b = e.target.closest(".opt"); if (!b) return;
+    SET.seg = b.dataset.seg;
+    syncChips(); changeSeg();
+  });
+  $("rateChips").addEventListener("click", function (e) {
+    var b = e.target.closest(".opt"); if (!b) return;
+    SET.rate = Number(b.dataset.rate);
+    syncChips();
+  });
+  $("volume").addEventListener("input", function () {
+    var v = Number(this.value) / 100;
+    SET.volume = v;
+    audio.volume = v;
+    var pct = Math.round(v * 100);
+    $("volVal").textContent = pct + "%";
+    $("volIcon").textContent = pct === 0 ? "🔇" : (pct < 50 ? "🔉" : "🔊");
+  });
+  $("volume").addEventListener("change", function () { syncChips(); });
+  $("blankChips").addEventListener("click", function (e) {
+    var b = e.target.closest(".opt"); if (!b) return;
+    if (SET.mode === "everyN") { toast("当前是「每隔 N 词」，密度档位不生效"); return; }
+    SET.blank = b.dataset.blank;
+    syncChips();
+    rebuildBlanks("已按" + DENSITY_LABEL[SET.blank] + "重新挖空");
+  });
+  $("modeChips").addEventListener("click", function (e) {
+    var b = e.target.closest(".opt"); if (!b) return;
+    SET.mode = b.dataset.mode;
+    syncChips();
+    rebuildBlanks("已切换为「" + b.textContent + "」");
+  });
+  $("everyN").addEventListener("change", function () {
+    SET.everyN = Math.min(30, Math.max(1, parseInt(this.value, 10) || 7));
+    this.value = SET.everyN;
+    if (SET.mode === "everyN") rebuildBlanks("已按每 " + SET.everyN + " 词挖一个重新挖空");
+    saveSettings();
+  });
+  $("skipChip").addEventListener("click", function () {
+    SET.skip = !SET.skip; syncChips(); rebuildBlanks("已" + (SET.skip ? "开启" : "关闭") + "跳过短词");
+  });
+  $("followChip").addEventListener("click", function () { SET.follow = !SET.follow; syncChips(); saveState(true); });
+  $("applyCustom").addEventListener("click", function () {
+    var n = Math.min(12, Math.max(1, parseInt($("customSeg").value, 10) || 5));
+    $("customSeg").value = n;
+    SET.seg = String(n);
+    syncChips(); changeSeg();
+  });
+  $("reblank").addEventListener("click", function () {
+    rebuildBlanks("已重新挖空");
+  });
+  $("advToggle").addEventListener("click", function () {
+    var box = $("advBox");
+    box.hidden = !box.hidden;
+    this.textContent = box.hidden ? "高级 ›" : "收起 ‹";
+  });
+
+  /* ---------- 跳转点 ---------- */
+  function renderPins() {
+    var box = $("pins"); box.innerHTML = "";
+    var d = dur();
+    if (!d) return;
+    MARKS.forEach(function (m) {
+      var b = document.createElement("button");
+      b.type = "button"; b.className = "dp-pin";
+      b.style.left = Math.max(0, Math.min(100, m.t / d * 100)) + "%";
+      b.title = "📍 " + fmt(m.t) + (m.label ? " " + m.label : "");
+      b.addEventListener("click", function (e) { e.stopPropagation(); seekPlay(m.t); });
+      box.appendChild(b);
+    });
+  }
+  function renderMarks() {
+    var box = $("marks"); box.innerHTML = "";
+    if (!MARKS.length) box.innerHTML = '<span class="hint">还没有跳转点</span>';
+    else MARKS.forEach(function (m, i) {
+      var wrap = document.createElement("span"); wrap.className = "mark";
+      var b = document.createElement("button"); b.className = "markbtn"; b.type = "button";
+      b.textContent = "📍 " + fmt(m.t) + (m.label ? " " + m.label : "");
+      b.addEventListener("click", function () { seekPlay(m.t); });
+      var del = document.createElement("span"); del.className = "del"; del.textContent = "×"; del.title = "删除";
+      del.addEventListener("click", function () { MARKS.splice(i, 1); renderMarks(); saveState(true); });
+      wrap.appendChild(b); wrap.appendChild(del); box.appendChild(wrap);
+    });
+    renderPins();
+  }
+  $("addMark").addEventListener("click", function () {
+    $("markTime").textContent = "⏱ " + fmt(audio.currentTime) + "（" + (page + 1) + "/" + NP + " 页）";
+    $("markLabel").value = "";
+    $("markForm").hidden = false;
+    setTimeout(function () { $("markLabel").focus(); }, 60);
+  });
+  function closeMark() { $("markForm").hidden = true; }
+  $("markCancel").addEventListener("click", closeMark);
+  $("markLabel").addEventListener("keydown", function (e) {
+    if (e.key === "Enter") $("markOk").click();
+    else if (e.key === "Escape") { e.stopPropagation(); closeMark(); }
+  });
+  $("markOk").addEventListener("click", function () {
+    var label = ($("markLabel").value || "").trim();
+    MARKS.push({ t: Math.round(audio.currentTime * 100) / 100, label: label });
+    MARKS.sort(function (a, b) { return a.t - b.t; });
+    renderMarks(); saveState(false);
+    closeMark();
+  });
+
+  /* ---------- 进度（每个练习独立） ---------- */
+  function collect() {
+    var o = {};
+    document.querySelectorAll("input.blank").forEach(function (i) { if (i.value.trim() !== "") o[i.dataset.id] = i.value; });
+    return o;
+  }
+  function saveState(silent) {
+    if (!STORE_KEY) return;
+    try {
+      localStorage.setItem(STORE_KEY, JSON.stringify({
+        t: audio.currentTime, page: page, blanks: BLANKS, marks: MARKS, ans: collect()
+      }));
+      $("progInfo").textContent = (silent ? "已自动保存 · " : "已保存 · ") + fmt(audio.currentTime);
+    } catch (e) { $("progInfo").textContent = "无法保存进度"; }
+  }
+  function scheduleSave() { clearTimeout(saveTimer); saveTimer = setTimeout(function () { saveState(false); }, 700); }
+  function applyAnswers(ans) {
+    if (!ans) return 0;
+    var n = 0;
+    document.querySelectorAll("input.blank").forEach(function (i) {
+      if (Object.prototype.hasOwnProperty.call(ans, i.dataset.id)) { i.value = ans[i.dataset.id]; fitBlank(i); n++; }
+    });
+    return n;
+  }
+  function loadState() {
+    var st = null;
+    try { var raw = localStorage.getItem(STORE_KEY); if (raw) st = JSON.parse(raw); } catch (e) {}
+    if (!st) return false;
+    MARKS = st.marks || []; renderMarks();
+    buildSegs();
+    renderPages(st.blanks || {});
+    var n = applyAnswers(st.ans);
+    if (typeof st.t === "number" && st.t > 1) {
+      var restore = function () { try { audio.currentTime = st.t; } catch (e) {} };
+      if (audio.readyState >= 1) restore();
+      else audio.addEventListener("loadedmetadata", restore, { once: true });
+    }
+    if (typeof st.page === "number") showPage(st.page, false);
+    $("progInfo").textContent = "已恢复上次进度：" + n + " 个已填答案";
+    return true;
+  }
+  document.addEventListener("input", function (e) {
+    if (e.target.classList && e.target.classList.contains("blank")) { fitBlank(e.target); scheduleSave(); }
+  });
+
+  /* ---------- 单词级查看答案：双击 / 双击轻点 / Shift+Enter ---------- */
+  function peekBlank(inp) {
+    if (!inp || !inp.dataset || !inp.dataset.ans) return;
+    inp.value = inp.dataset.ans;
+    inp.classList.remove("bad");
+    fitBlank(inp, true);
+    if (inp.select) inp.select();
+    saveState(true);
+  }
+  $("pages").addEventListener("dblclick", function (e) {
+    var t = e.target;
+    if (!t.classList || !t.classList.contains("blank")) return;
+    e.preventDefault();
+    peekBlank(t);
+  });
+  /* iOS 上双击输入框不一定给 dblclick，这里自己认触摸连点 */
+  var lastTap = { id: "", t: 0, x: 0, y: 0 };
+  $("pages").addEventListener("pointerup", function (e) {
+    if (e.pointerType !== "touch") return;
+    var t = e.target;
+    if (!t.classList || !t.classList.contains("blank")) return;
+    var now = Date.now();
+    if (lastTap.id === t.dataset.id && now - lastTap.t < 350 &&
+        Math.abs(e.clientX - lastTap.x) < 24 && Math.abs(e.clientY - lastTap.y) < 24) {
+      peekBlank(t);
+      lastTap.id = "";
+    } else {
+      lastTap = { id: t.dataset.id, t: now, x: e.clientX, y: e.clientY };
+    }
+  });
+  $("pages").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && e.shiftKey && e.target.classList && e.target.classList.contains("blank")) {
+      e.preventDefault();
+      peekBlank(e.target);
+    }
+  });
+  $("saveNow").addEventListener("click", function () { saveState(false); });
+  $("clearProg").addEventListener("click", function () {
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+    MARKS = []; renderMarks(); $("progInfo").textContent = "已清除本次进度";
+  });
+
+  /* ---------- 判分 ---------- */
+  $("check").addEventListener("click", function () {
+    var ins = document.querySelectorAll("input.blank"), correct = 0, filled = 0;
+    var pageTotal = 0, pageOk = 0;
+    ins.forEach(function (inp) {
+      var onCurPage = inp.closest(".ppage") && !inp.closest(".ppage").hidden;
+      var ans = inp.dataset.ans, val = inp.value.trim();
+      inp.classList.remove("ok", "bad");
+      if (val === "") { if (onCurPage) pageTotal++; return; }
+      filled++; if (onCurPage) pageTotal++;
+      if (norm(ans) === norm(val)) { inp.classList.add("ok"); correct++; if (onCurPage) pageOk++; }
+      else { inp.classList.add("bad"); }
+    });
+    $("score").textContent = "本页 " + pageOk + "/" + pageTotal + " · 全篇 " + correct + "/" + filled + "（共 " + ins.length + " 空）";
+    $("score").style.display = "inline-block";
+    saveState(true);
+  });
+  $("show").addEventListener("click", function () {
+    document.querySelectorAll("input.blank").forEach(function (i) {
+      i.value = i.dataset.ans; i.classList.remove("bad"); i.classList.add("ok"); fitBlank(i, true);
+    });
+    $("score").textContent = "已展示全部答案"; $("score").style.display = "inline-block";
+  });
+  $("clear").addEventListener("click", function () {
+    document.querySelectorAll("input.blank").forEach(function (i) {
+      i.value = ""; i.classList.remove("ok", "bad"); fitBlank(i);
+    });
+    $("score").textContent = ""; $("score").style.display = "none";
+    saveState(true);
+  });
+
+  /* ---------- 启动 ---------- */
+  loadSettings();
+  syncChips();
+  renderMarks();
+  syncTransport();
+  if (!FLAT.length) {
+    $("pages").innerHTML = '<div class="tip-card"><span class="ico">⚠️</span><span>没有找到练习数据（data.js 缺失或为空）。</span></div>';
+    $("ex-meta").textContent = "";
+  } else {
+    STORE_KEY = "listen2." + hash((EX.title || "") + Math.round(totalDur) + "|" + FLAT.length);
+    if (!loadState()) {
+      buildSegs();
+      renderPages(blankSelection());
+    }
+  }
+})();
+</script>
+</body>
+</html>
