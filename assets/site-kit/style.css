@@ -70,6 +70,10 @@ img { max-width: 100%; }
 
 ::selection { background: var(--butter); color: var(--ink); }
 
+/* 只有键盘聚焦（Tab / 方向键）才画焦点环：珊瑚色柔圈替掉浏览器默认的黑框。
+   鼠标点击不会触发 :focus-visible，所以动手点时不会冒框。 */
+:focus-visible { outline: 3px solid var(--coral); outline-offset: 3px; }
+
 /* ---------- 顶部黏土导航 ---------- */
 .nav {
   position: sticky;

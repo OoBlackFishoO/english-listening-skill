@@ -312,6 +312,7 @@ input.blank.bad{background:#FFE4EC;box-shadow:var(--clay-in-light),inset 0 -3px 
       <div class="fp-chips" id="rateChips">
         <button class="opt" type="button" data-rate="0.5">0.5x</button>
         <button class="opt" type="button" data-rate="0.75">0.75x</button>
+        <button class="opt" type="button" data-rate="0.9">0.9x</button>
         <button class="opt" type="button" data-rate="1">1.0x</button>
         <button class="opt" type="button" data-rate="1.25">1.25x</button>
         <button class="opt" type="button" data-rate="1.5">1.5x</button>
@@ -675,6 +676,17 @@ input.blank.bad{background:#FFE4EC;box-shadow:var(--clay-in-light),inset 0 -3px 
     if (!s.words || !s.words.length) host.textContent = s.text || "";
   }
 
+  /* 段条里「当前这一句」是哪一句：优先正在播（高亮）的那句，其次播放头落在的那句，最后退回第一句。
+     供 🔁 只循环当前句使用。 */
+  function currentSenIn(box, sents) {
+    if (curSen && curSen.el && box.contains(curSen.el)) return curSen;
+    var t = audio.currentTime;
+    for (var i = 0; i < sents.length; i++) {
+      if (t >= sents[i].start && t < sents[i].end) return sents[i];
+    }
+    return sents[0];
+  }
+
   function renderPages(sel) {
     var host = $("pages"); host.innerHTML = ""; SENTENCES = []; BLANKS = {};
     PAGES.forEach(function (pgo, pi) {
@@ -693,7 +705,7 @@ input.blank.bad{background:#FFE4EC;box-shadow:var(--clay-in-light),inset 0 -3px 
         var t0 = sents[0].start, t1 = sents[sents.length - 1].end;
         var bar = document.createElement("div"); bar.className = "segbar";
         bar.innerHTML = '<button class="segbtn play" type="button">▶ ' + (multi ? ("本段 · " + sents.length + " 句") : "本句") + '</button>' +
-          '<button class="segbtn loopBtn" type="button" title="循环' + (multi ? "本段" : "这句") + '">🔁</button>' +
+          '<button class="segbtn loopBtn" type="button" title="' + (multi ? "循环当前这一句" : "循环这句") + '">🔁</button>' +
           '<span class="time">' + fmt(t0) + ' – ' + fmt(t1) + '</span>';
         var hasZh = sents.some(function (s) { return s.zh; });
         if (hasZh) {
@@ -717,9 +729,15 @@ input.blank.bad{background:#FFE4EC;box-shadow:var(--clay-in-light),inset 0 -3px 
         bar.querySelector(".play").addEventListener("click", function () { seekPlay(t0); });
         bar.querySelector(".loopBtn").addEventListener("click", function () {
           var on = !box.classList.contains("looping");
-          box.classList.toggle("looping", on);
-          if (on) { loopSeg = { start: t0, end: t1 }; seekPlay(t0); }
-          else if (loopSeg && loopSeg.start === t0) { loopSeg = null; }
+          /* 同一时刻只让一处在循环：先把别处的循环标记收掉 */
+          document.querySelectorAll(".seg.looping").forEach(function (el) { el.classList.remove("looping"); });
+          if (!on) { loopSeg = null; return; }
+          /* 只循环「当前这一句」，不再把整段的多句一起循环 */
+          var pick = currentSenIn(box, sents);
+          box.classList.add("looping");
+          loopSeg = { start: pick.start, end: pick.end };
+          seekPlay(pick.start);
+          if (multi) toast("🔁 只循环这一句");
         });
         var zhB = bar.querySelector(".zhBtn");
         if (zhB) zhB.addEventListener("click", function () {
@@ -787,13 +805,33 @@ input.blank.bad{background:#FFE4EC;box-shadow:var(--clay-in-light),inset 0 -3px 
   }
   $("prevPage").addEventListener("click", function () { showPage(page - 1, true); });
   $("nextPage").addEventListener("click", function () { showPage(page + 1, true); });
+  /* 焦点是不是「鼠标点出来」的。鼠标点过按钮后焦点会留在按钮上，
+     这时一按空格，浏览器会给它套上默认黑框（:focus-visible 被打开）。 */
+  var focusByPointer = false;
+  document.addEventListener("pointerdown", function () { focusByPointer = true; }, true);
+  document.addEventListener("keydown", function (e) { if (e.key === "Tab") focusByPointer = false; }, true);
+
+  /* 焦点是否停在「确实需要空格」的控件上：文本框要打字、下拉框要展开，空格得留给它们。
+     而按钮和滑杆（进度/音量 range）不需要空格，所以空格一律归播放键。 */
+  function isTypingTarget() {
+    var el = document.activeElement;
+    var tag = el && el.tagName;
+    if (tag === "TEXTAREA" || tag === "SELECT") return true;
+    return tag === "INPUT" && !/^(range|checkbox|radio|button|submit|reset)$/i.test(el.type || "text");
+  }
+
   document.addEventListener("keydown", function (e) {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    var tag = document.activeElement && document.activeElement.tagName;
-    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    if (isTypingTarget()) return;
     if (e.key === " " || e.code === "Space") {
-      if (tag === "BUTTON") return;          /* 焦点在按钮上时，空格交给按钮自己 */
-      e.preventDefault();                    /* 别让空格把页面滚下去 */
+      /* 空格永远只控制播放/暂停：点过的按钮会留着焦点，一旦放行，空格就会去「再点一次」那个按钮。
+         按钮仍然可以用 Enter 触发；填空框里的空格照常打字（上面已提前返回）。 */
+      e.preventDefault();                    /* 不滚动页面，也不激活焦点所在的按钮 */
+      if (e.repeat) return;                  /* 长按空格不来回切播放/暂停 */
+      /* 鼠标点出来的焦点：空格又不激活按钮，留着只会被画上黑框，直接松掉；
+         键盘 Tab 过来的焦点保留，那边要靠焦点环指示位置。 */
+      var ae = document.activeElement;
+      if (focusByPointer && ae && ae.tagName === "BUTTON") ae.blur();
       $("mb-play").click();
     } else if (e.key === "ArrowLeft") {
       e.preventDefault(); stepSen(-1);
@@ -804,6 +842,15 @@ input.blank.bad{background:#FFE4EC;box-shadow:var(--clay-in-light),inset 0 -3px 
     } else if (e.key === "PageDown") {
       e.preventDefault(); showPage(page + 1, true);
     }
+  });
+
+  /* 空格兜底：有的浏览器把按钮的激活放在 keyup 才派发，这里再拦一道，
+     保证空格不会漏到「上一个点过的按钮」身上。 */
+  document.addEventListener("keyup", function (e) {
+    if (e.key !== " " && e.code !== "Space") return;
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (isTypingTarget()) return;
+    e.preventDefault();
   });
 
   /* ---------- 跟听 ---------- */
@@ -872,7 +919,7 @@ input.blank.bad{background:#FFE4EC;box-shadow:var(--clay-in-light),inset 0 -3px 
 
   /* ---------- 播放坞：播放 / 上一句 / 下一句 / 本句重播 ---------- */
   $("mb-play").addEventListener("click", function () {
-    if (audio.paused) { loopSeg = null; holdPage = false; audio.play(); } else audio.pause();
+    if (audio.paused) { holdPage = false; audio.play(); } else audio.pause();
   });
   $("mb-replay").addEventListener("click", function () {
     /* 真·本段：从当前句所在段的段首重播；没有当前句就取本页第一段 */
@@ -910,7 +957,7 @@ input.blank.bad{background:#FFE4EC;box-shadow:var(--clay-in-light),inset 0 -3px 
   $("mb-next").addEventListener("click", function () { stepSen(1); });
 
   /* 倍速：点一下切下一档（完整档位在设置球里） */
-  var RATES = [0.5, 0.75, 1, 1.25, 1.5];
+  var RATES = [0.5, 0.75, 0.9, 1, 1.25, 1.5];
   $("tcRate").addEventListener("click", function () {
     var i = RATES.indexOf(Number(SET.rate));
     if (i < 0) i = 2;
