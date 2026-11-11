@@ -687,6 +687,22 @@ input.blank.bad{background:#FFE4EC;box-shadow:var(--clay-in-light),inset 0 -3px 
     return sents[0];
   }
 
+  /* 循环激活时，把循环范围搬到某一句上。上一句/下一句切换句子后，
+     循环要跟着新句子走，否则旧范围越过就没反应了（看起来像「循环失效」）。 */
+  function retargetLoop(sen) {
+    if (!sen) return;
+    loopSeg = { start: sen.start, end: sen.end };
+    document.querySelectorAll(".seg.looping").forEach(function (el) { el.classList.remove("looping"); });
+    /* FLAT 里存的是原始数据对象（没有 el），要按 _fi 去 SENTENCES 里找它对应的那段 DOM */
+    var box = sen.el && sen.el.closest ? sen.el.closest(".seg") : null;
+    if (!box) {
+      for (var i = 0; i < SENTENCES.length; i++) {
+        if (SENTENCES[i].idx === sen._fi && SENTENCES[i].el) { box = SENTENCES[i].el.closest(".seg"); break; }
+      }
+    }
+    if (box) box.classList.add("looping");
+  }
+
   function renderPages(sel) {
     var host = $("pages"); host.innerHTML = ""; SENTENCES = []; BLANKS = {};
     PAGES.forEach(function (pgo, pi) {
@@ -948,10 +964,12 @@ input.blank.bad{background:#FFE4EC;box-shadow:var(--clay-in-light),inset 0 -3px 
     if (i < 0) return;
     var j = Math.max(0, Math.min(FLAT.length - 1, i + dir));
     if (j === i) return;
+    var keepLoop = !!loopSeg;               /* 跨页翻页会清掉循环，先记住原状态 */
     var pg = page;
     for (var k = 0; k < SENTENCES.length; k++) if (SENTENCES[k].idx === j) { pg = SENTENCES[k].page; break; }
     if (pg !== page) showPage(pg, true);
     seekPlay(FLAT[j].start);
+    if (keepLoop) retargetLoop(FLAT[j]);    /* 循环跟着走到新的一句 */
   }
   $("mb-prev").addEventListener("click", function () { stepSen(-1); });
   $("mb-next").addEventListener("click", function () { stepSen(1); });
